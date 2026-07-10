@@ -1,0 +1,36 @@
+# Build outputs
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x86/
+x64/
+artifacts/
+
+# Test outputs
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# Visual Studio and user-specific state
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.DotSettings.user
+_ReSharper*/
+
+# NuGet restore output
+packages/*
+!packages/repositories.config
+
+# Legacy Visual Studio source-control metadata
+*.vssscc
+*.vspscc
+
+# Temporary files and logs
+*.log
+*.tmp
+*.bak
