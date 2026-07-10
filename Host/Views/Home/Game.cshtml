@@ -1,0 +1,45 @@
+﻿@model Guid?
+<div class="4u">
+    <div>
+        <h2 data-bind="text:message"></h2>
+    </div>
+    <div data-bind="visible:state()==7">
+        @Html.ActionLink("Join another game", "Game", null, new { Class = "button", target = "_blank" })
+    </div>
+    @if (Model != null)
+    {
+        <div>
+            Send your opponent this @Html.ActionLink("private url", "Game", new { token = Model }, null)
+            so he would join your game.
+        </div>
+    }
+    else
+    {
+        <p>
+            <a href="#" data-bind="visible: state() == 8, click: playWithComputer">Play with computer</a>
+        </p>
+    }
+    @*<div data-bind="visible:state()==3||state()==4">
+        <a href="#" class="button" data-bind="click:requestRematch">request a rematch</a>
+    </div>
+    *@
+</div>
+<div class="8u">
+    <div class="board-wrapper">
+        <div class="board" data-bind="foreach: board.rows">
+            <div class="row" data-bind="foreach: cells">
+                <div class="cell" data-bind="css: {opponent: value()==2, host: value() ==1, win: value()==5 }, click: sendMove">
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script type="text/javascript">
+        $(function () {
+            var myGame = new game('@Model');
+            ko.applyBindings(myGame);
+            myGame.initialize();
+        });
+    </script>
+</div>

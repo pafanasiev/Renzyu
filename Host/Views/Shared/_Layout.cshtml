@@ -1,0 +1,73 @@
+﻿<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>Minimaxing: A Responsive HTML5 Site Template by HTML5 Up! (Homepage)</title>
+		<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+		<meta name="description" content="" />
+		<meta name="keywords" content="Renzyu, Gomoku, Play, Online" />
+		<link href="http://fonts.googleapis.com/css?family=Ubuntu+Condensed" rel="stylesheet">
+		<noscript><link rel="stylesheet" href="css/5grid/core.css" />
+            <link rel="stylesheet" href="css/5grid/core-desktop.css" />
+            <link rel="stylesheet" href="css/5grid/core-1200px.css" />
+            <link rel="stylesheet" href="css/5grid/core-noscript.css" />
+            <link rel="stylesheet" href="css/style.css" />
+            <link rel="stylesheet" href="css/style-deskstop.css" />
+
+		</noscript>
+		<!--[if IE 9]><link rel="stylesheet" href="css/style-ie9.css" /><![endif]-->
+        @Scripts.Render("~/bundles/modernizr")
+        @Scripts.Render("~/bundles/jquery")
+        @Scripts.Render("~/bundles/knockout")
+        @Scripts.Render("~/bundles/signalR")
+        @Scripts.Render("~/Content/5grid/init.js?use=mobile,desktop,1000px&amp;mobileUI=1&amp;mobileUI.theme=none&amp;mobileUI.titleBarHeight=55&amp;mobileUI.openerWidth=66")
+        <script src="/signalr/hubs" type="text/javascript"></script>
+        @Scripts.Render("~/scripts/Board.js")
+        @RenderSection("scripts", required: false)
+	</head>
+	<body>
+	<!-- ********************************************************* -->
+		<div id="header-wrapper">
+			<div class="5grid-layout">
+				<div class="row">
+					<div class="12u">
+						
+						<header id="header">
+							<h1><a href="#" class="mobileUI-site-name">Renzyu</a></h1>
+							<nav class="mobileUI-site-nav">
+								<a href="index.html" class="current-page-item">Home</a>
+							</nav>
+						</header>
+					
+					</div>
+				</div>
+			</div>
+		</div>
+        <div id="main">
+			<div class="5grid-layout">
+				<div class="row main-row">
+						@RenderBody()
+				</div>
+			</div>
+		</div>
+		<div id="footer-wrapper">
+			<div class="5grid-layout">
+                <div class="row">
+                    <div class="12u">
+                        <section>
+                            <p>Here should be some vivid description of how cool it is to play Renzyu</p>
+                        </section>
+                    </div>
+                </div>
+				<div class="row">
+					<div class="12u">
+						<div id="copyright">
+							&copy; Petya Afanasiev. All rights reserved. | Design: <a href="http://html5up.net">HTML5 Up!</a> | Images: <a href="http://fotogrph.com">Fotogrph</a>
+						</div>
+
+					</div>
+				</div>
+			</div>
+		</div>
+	<!-- ********************************************************* -->
+	</body>
+</html>

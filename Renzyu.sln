@@ -1,0 +1,47 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Host", "Host\Host.csproj", "{F2555302-E654-4BFA-AD47-FEEACED11DBD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Host.Tests", "Host.Tests\Host.Tests.csproj", "{5AEF92E1-6C6C-4A6D-9A4F-7441C3B91874}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Host.UnitTests", "Host.UnitTests\Host.UnitTests.csproj", "{98B97BAE-E28C-4170-871F-9AF5BE2B02E2}"
+EndProject
+Global
+	GlobalSection(TeamFoundationVersionControl) = preSolution
+		SccNumberOfProjects = 4
+		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccTeamFoundationServer = https://00jared00.visualstudio.com/defaultcollection
+		SccLocalPath0 = .
+		SccProjectUniqueName1 = Host\\Host.csproj
+		SccProjectName1 = Host
+		SccLocalPath1 = Host
+		SccProjectUniqueName2 = Host.Tests\\Host.Tests.csproj
+		SccProjectName2 = Host.Tests
+		SccLocalPath2 = Host.Tests
+		SccProjectUniqueName3 = Host.UnitTests\\Host.UnitTests.csproj
+		SccProjectName3 = Host.UnitTests
+		SccLocalPath3 = Host.UnitTests
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F2555302-E654-4BFA-AD47-FEEACED11DBD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F2555302-E654-4BFA-AD47-FEEACED11DBD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F2555302-E654-4BFA-AD47-FEEACED11DBD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F2555302-E654-4BFA-AD47-FEEACED11DBD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5AEF92E1-6C6C-4A6D-9A4F-7441C3B91874}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5AEF92E1-6C6C-4A6D-9A4F-7441C3B91874}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5AEF92E1-6C6C-4A6D-9A4F-7441C3B91874}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5AEF92E1-6C6C-4A6D-9A4F-7441C3B91874}.Release|Any CPU.Build.0 = Release|Any CPU
+		{98B97BAE-E28C-4170-871F-9AF5BE2B02E2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{98B97BAE-E28C-4170-871F-9AF5BE2B02E2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{98B97BAE-E28C-4170-871F-9AF5BE2B02E2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{98B97BAE-E28C-4170-871F-9AF5BE2B02E2}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

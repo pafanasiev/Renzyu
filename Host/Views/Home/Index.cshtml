@@ -1,0 +1,9 @@
+﻿@model Guid
+<div class="12u">
+<section>
+    <div style="text-align:center">
+            @Html.ActionLink("Join a random game", "Game", null, new { Class = "button" })
+            @Html.ActionLink("play with friends", "Game", new { token = Model }, new { Class = "button" })
+    </div>
+</section>
+    </div>
