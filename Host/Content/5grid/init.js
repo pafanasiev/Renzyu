@@ -131,22 +131,6 @@
 /* Core              */
 /*********************/
 
-	// Legacy IE fixes
-		if ($.browser.msie)
-		{
-			// HTML5 Shiv
-				if ($.browser.version < 9)
-					_head.append('<script type="text/javascript" src="' + _baseURL + '5grid/html5shiv.js" />');
-
-			// Versions that don't support CSS3 pseudo classes
-				if ($.browser.version < 8)
-				{
-					$(function() {
-						$('.5grid, .5grid-layout, .do-5grid').after('<div style="clear: both;"></div>');
-					});
-				}
-		}
-
 	// Insert stylesheets
 		_headQueue.pushE_5grid(_baseURL + '5grid/core.css')
 		_headQueue.pushE_5grid(_baseURL + _opts['prefix'] + '.css');

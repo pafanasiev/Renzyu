@@ -53,7 +53,7 @@ $msBuild = Find-MSBuild
 $iisExpress = Find-IISExpress
 
 Write-Host "Building Renzyu ($Configuration)..."
-& $msBuild $projectPath /t:Build "/p:Configuration=$Configuration" /nologo /verbosity:minimal
+& $msBuild $projectPath /restore /t:Build "/p:Configuration=$Configuration" /nologo /verbosity:minimal
 if ($LASTEXITCODE -ne 0) {
     throw "Build failed with exit code $LASTEXITCODE."
 }

@@ -6,7 +6,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Host.Models;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Rhino.Mocks;
 
 namespace Host.Tests
 {
