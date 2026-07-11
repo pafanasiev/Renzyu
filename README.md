@@ -1,10 +1,10 @@
 # Renzyu
 
-Renzyu is an ASP.NET Core MVC and SignalR application targeting .NET 10 LTS.
+Renzyu is an ASP.NET Core MVC and SignalR application targeting .NET 8 LTS.
 
 ## Local development
 
-Install the .NET 10 SDK, Node.js 24 LTS, and npm. The application build restores
+Install the .NET 8 SDK, Node.js 24 LTS, and npm. The application build restores
 the locked browser dependencies and generates the assets under
 `Host\wwwroot\Scripts\vendor`.
 
@@ -23,11 +23,18 @@ Build and run the Linux image with Docker:
 
 ```powershell
 docker build --tag renzyu .
-docker run --rm --publish 8080:8080 renzyu
+docker volume create renzyu-telemetry
+docker run --rm --publish 8080:8080 `
+  --mount type=volume,source=renzyu-telemetry,target=/data/telemetry `
+  renzyu
 ```
 
 Open `http://localhost:8080`. The final image uses the official non-root
-ASP.NET Core 10 runtime image; the .NET SDK and Node.js remain in build stages.
+ASP.NET Core 8 runtime image; the .NET SDK and Node.js remain in build stages.
+
+Computer games write one append-only JSONL file per game to `/data/telemetry`.
+Games won by a human are renamed with a `.computer-lost.jsonl` suffix. Set
+`RENZYU_GAME_TELEMETRY_DIRECTORY` to override the path outside Docker.
 
 NuGet and npm dependencies are locked. Use locked restore mode in CI so
 dependency graph changes must be committed explicitly.

@@ -38,3 +38,4 @@ Host/wwwroot/Scripts/vendor/
 *.log
 *.tmp
 *.bak
+telemetry/
