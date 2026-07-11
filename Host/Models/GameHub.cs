@@ -1,14 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+using System;
 using System.Threading.Tasks;
-using System.Web;
-using SignalR.Hubs;
+using Microsoft.AspNet.SignalR;
+using Microsoft.AspNet.SignalR.Hubs;
 
 namespace Host.Models
 {
     [HubName("game")]
-    public class GameHub : Hub, IDisconnect
+    public class GameHub : Hub
     {
         public void SendMove(int x, int y)
         {
@@ -36,7 +34,7 @@ namespace Host.Models
             //item.Value - mark
             foreach (var item in game.GetPlayersWithMarks())
             {
-                Clients[item.Key].receiveJoin(game.GameId.ToString(), item.Value);
+                Clients.Client(item.Key).receiveJoin(game.GameId.ToString(), item.Value);
             }
         }
 
@@ -48,7 +46,7 @@ namespace Host.Models
             }
         }
 
-        public Task Disconnect()
+        public override Task OnDisconnected(bool stopCalled)
         {
             //remove the connection from queue if it's still waiting for opponent
             PlayerQueue.Dequeue(Context.ConnectionId);
@@ -57,22 +55,22 @@ namespace Host.Models
             var games = Game.GetByConnectionId(Context.ConnectionId);
             foreach (var game in games)
             {
-                Clients[game.GameId.ToString()].receiveDisconnect();
+                Clients.Group(game.GameId.ToString()).receiveDisconnect();
 
                 //remove the game and free memory
                 game.End();
             }
-            return null;
+            return base.OnDisconnected(stopCalled);
         }
 
         private void ProcessMoveResult(MoveResult result, Game game)
         {
             if (result == null) return;
 
-            Clients[game.GameId.ToString()].receiveMove(result.X, result.Y, result.Mark);
+            Clients.Group(game.GameId.ToString()).receiveMove(result.X, result.Y, result.Mark);
             if (result.WinRow != null)
             {
-                Clients[game.GameId.ToString()].receiveWin(result.WinRow.Cells, result.Mark);
+                Clients.Group(game.GameId.ToString()).receiveWin(result.WinRow.Cells, result.Mark);
 
                 //remove the game
                 game.End();
@@ -83,7 +81,7 @@ namespace Host.Models
 
         private Game GetCurrentGame()
         {
-            Guid gameId = Guid.Parse(Caller.gameId);
+            Guid gameId = Guid.Parse(Clients.Caller.gameId);
             return Game.GetById(gameId);
         }
     }

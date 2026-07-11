@@ -1,0 +1,13 @@
+{
+  "name": "renzyu",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build:client": "node scripts/build-client.mjs"
+  },
+  "dependencies": {
+    "jquery": "3.7.1",
+    "knockout": "3.5.3",
+    "signalr": "2.4.3"
+  }
+}

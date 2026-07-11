@@ -26,6 +26,10 @@ _ReSharper*/
 packages/*
 !packages/repositories.config
 
+# npm restore and generated browser assets
+node_modules/
+Host/Scripts/vendor/
+
 # Legacy Visual Studio source-control metadata
 *.vssscc
 *.vspscc
