@@ -51,6 +51,20 @@ saved model from **Choose your AI opponent**, and select **Play selected AI**.
 Model JSON files are intentionally ignored by Git; copy or mount the files when
 moving trained opponents between machines.
 
+## Replay game telemetry in Copilot
+
+The project includes a **Renzyu replay** canvas extension for validated JSONL
+telemetry. In a Copilot project session, ask:
+
+```text
+Open Host\bin\Debug\net8.0\telemetry\<game-file>.jsonl in the Renzyu replay canvas.
+```
+
+The canvas validates move order, alternating marks, actors, coordinates,
+timestamps, occupied cells, and terminal wins before opening. Use its slider,
+move list, arrow keys, or autoplay controls to inspect the game. Winning stones
+and the latest move are highlighted.
+
 ## Container
 
 Build and run the Linux image with Docker:
