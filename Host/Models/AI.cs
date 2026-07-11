@@ -8,12 +8,23 @@ namespace Host.Models
         public const int maxRank = 100000;
         public const int minRank = -100000;
 
+        private const int MaxSearchDepth = 4;
+        private const int MaxSearchNodes = 60000;
+        private const int TranspositionTableSize = 8192;
+        private const int NoMove = -1;
+        private const byte ExactBound = 0;
+        private const byte LowerBound = 1;
+        private const byte UpperBound = 2;
         private const int MaxHeuristicRank = 50000;
         private const int CandidateRadius = 2;
+        private const int PreferredMoveBonus = 2000000;
+        private static readonly int[] MoveLimitsByPly = { 32, 16, 12, 8 };
         private static readonly int[] ComputerWeights = { 0, 2, 12, 180, 6000, 0 };
         private static readonly int[] PlayerWeights = { 0, 2, 12, 180, 6500, 0 };
         private static readonly int[] DirectionX = { 1, 0, 1, 1 };
         private static readonly int[] DirectionY = { 0, 1, 1, -1 };
+        private readonly object _searchLock = new object();
+        private SearchWorkspace _workspace;
 
         public Cell GetBestMove(GameBoard board)
         {
@@ -22,122 +33,181 @@ namespace Host.Models
             if (board.Width == 0 || board.Height == 0)
                 throw new InvalidOperationException("No legal moves are available.");
 
-            if (!HasOccupiedCells(board))
+            lock (_searchLock)
             {
-                return new Cell(board.Width / 2, board.Height / 2);
+                return GetBestMoveCore(board);
             }
+        }
 
-            var search = new SearchBuffers(board.Width * board.Height);
-            int moveCount = GenerateMoves(board, search, 0, ComputerGame.COMPUTER_MARK);
-            if (moveCount == 0)
-                throw new InvalidOperationException("No legal moves are available.");
+        private Cell GetBestMoveCore(GameBoard board)
+        {
+            if (!HasOccupiedCells(board))
+                return new Cell(board.Width / 2, board.Height / 2);
 
-            int bestMove = search.Moves[0][moveCount - 1];
-            int bestRank = minRank;
-            int alpha = minRank;
+            if (_workspace == null || !_workspace.Matches(board))
+                _workspace = new SearchWorkspace(board.Width, board.Height);
 
-            for (int i = moveCount - 1; i >= 0; i--)
+            SearchWorkspace search = _workspace;
+            search.StartSearch();
+            ulong hash = search.ComputeHash(board);
+            int evaluation = EvaluateBoardRaw(board);
+            int bestMove = NoMove;
+
+            for (int depth = 1; depth <= MaxSearchDepth; depth++)
             {
-                int encodedMove = search.Moves[0][i];
-                int x = encodedMove / board.Height;
-                int y = encodedMove % board.Height;
-                int rank;
+                int iterationMove;
+                int iterationRank = Search(
+                    board,
+                    search,
+                    depth,
+                    0,
+                    true,
+                    minRank,
+                    maxRank,
+                    NoMove,
+                    NoMove,
+                    0,
+                    hash,
+                    evaluation,
+                    out iterationMove);
 
-                board.SetValue(x, y, ComputerGame.COMPUTER_MARK);
-                try
-                {
-                    rank = Search(
-                        board,
-                        search,
-                        1,
-                        false,
-                        alpha,
-                        maxRank,
-                        x,
-                        y,
-                        ComputerGame.COMPUTER_MARK);
-                }
-                finally
-                {
-                    board.SetValue(x, y, 0);
-                }
-
-                if (rank > bestRank)
-                {
-                    bestRank = rank;
-                    bestMove = encodedMove;
-                }
-
-                if (bestRank > alpha)
-                    alpha = bestRank;
-
-                if (bestRank == maxRank - 1)
+                if (search.Aborted)
+                    break;
+                if (iterationMove != NoMove)
+                    bestMove = iterationMove;
+                if (iterationRank == maxRank - 1)
                     break;
             }
+
+            if (bestMove == NoMove)
+                throw new InvalidOperationException("No legal moves are available.");
 
             return new Cell(bestMove / board.Height, bestMove % board.Height);
         }
 
         private int Search(
             GameBoard board,
-            SearchBuffers search,
-            int depth,
+            SearchWorkspace search,
+            int remainingDepth,
+            int ply,
             bool maximizing,
             int alpha,
             int beta,
             int lastX,
             int lastY,
-            int lastMark)
+            int lastMark,
+            ulong hash,
+            int evaluation,
+            out int bestMove)
         {
-            if (IsWinningMove(board, lastX, lastY, lastMark))
-                return lastMark == ComputerGame.COMPUTER_MARK ? maxRank - depth : minRank + depth;
+            bestMove = NoMove;
+            search.Nodes++;
+            if (search.Nodes > MaxSearchNodes)
+            {
+                search.Aborted = true;
+                return 0;
+            }
 
-            if (depth == maxDepth)
-                return EvaluateLeaf(board, maximizing, depth);
+            if (lastMark != 0 && IsWinningMove(board, lastX, lastY, lastMark))
+                return lastMark == ComputerGame.COMPUTER_MARK ? maxRank - ply : minRank + ply;
 
+            if (remainingDepth == 0)
+                return ClampHeuristicRank(evaluation);
+
+            int originalAlpha = alpha;
+            int originalBeta = beta;
             int mark = maximizing ? ComputerGame.COMPUTER_MARK : ComputerGame.PLAYER_MARK;
-            int moveCount = GenerateMoves(board, search, depth, mark);
+            ulong key = hash ^ search.GetSideKey(mark);
+            int preferredMove = NoMove;
+            TranspositionEntry cached;
+            if (search.TryGetEntry(key, out cached))
+            {
+                preferredMove = cached.BestMove;
+                if (cached.Depth >= remainingDepth)
+                {
+                    if (cached.Bound == ExactBound)
+                    {
+                        bestMove = cached.BestMove;
+                        return cached.Value;
+                    }
+                    if (cached.Bound == LowerBound && cached.Value > alpha)
+                        alpha = cached.Value;
+                    else if (cached.Bound == UpperBound && cached.Value < beta)
+                        beta = cached.Value;
+
+                    if (alpha >= beta)
+                    {
+                        bestMove = cached.BestMove;
+                        return cached.Value;
+                    }
+                }
+            }
+
+            int moveLimit = MoveLimitsByPly[Math.Min(ply, MoveLimitsByPly.Length - 1)];
+            int moveCount = GenerateMoves(board, search, ply, mark, preferredMove, moveLimit);
             if (moveCount == 0)
-                return EvaluateBoard(board);
+            {
+                int value = ClampHeuristicRank(evaluation);
+                search.StoreEntry(key, remainingDepth, value, ExactBound, NoMove);
+                return value;
+            }
 
             int bestRank = maximizing ? minRank : maxRank;
             for (int i = moveCount - 1; i >= 0; i--)
             {
-                int encodedMove = search.Moves[depth][i];
+                int encodedMove = search.Moves[ply][i];
                 int x = encodedMove / board.Height;
                 int y = encodedMove % board.Height;
                 int rank;
+                int affectedEvaluation = EvaluateAffectedWindows(board, x, y);
 
                 board.SetValue(x, y, mark);
                 try
                 {
+                    int childEvaluation = evaluation
+                        - affectedEvaluation
+                        + EvaluateAffectedWindows(board, x, y);
+                    int childMove;
                     rank = Search(
                         board,
                         search,
-                        depth + 1,
+                        remainingDepth - 1,
+                        ply + 1,
                         !maximizing,
                         alpha,
                         beta,
                         x,
                         y,
-                        mark);
+                        mark,
+                        hash ^ search.GetPieceKey(encodedMove, mark),
+                        childEvaluation,
+                        out childMove);
                 }
                 finally
                 {
                     board.SetValue(x, y, 0);
                 }
 
+                if (search.Aborted)
+                    return 0;
+
                 if (maximizing)
                 {
                     if (rank > bestRank)
+                    {
                         bestRank = rank;
+                        bestMove = encodedMove;
+                    }
                     if (bestRank > alpha)
                         alpha = bestRank;
                 }
                 else
                 {
                     if (rank < bestRank)
+                    {
                         bestRank = rank;
+                        bestMove = encodedMove;
+                    }
                     if (bestRank < beta)
                         beta = bestRank;
                 }
@@ -146,28 +216,28 @@ namespace Host.Models
                     break;
             }
 
+            byte bound = ExactBound;
+            if (bestRank <= originalAlpha)
+                bound = UpperBound;
+            else if (bestRank >= originalBeta)
+                bound = LowerBound;
+            search.StoreEntry(key, remainingDepth, bestRank, bound, bestMove);
             return bestRank;
         }
 
-        private int EvaluateLeaf(GameBoard board, bool maximizing, int depth)
+        private int GenerateMoves(
+            GameBoard board,
+            SearchWorkspace search,
+            int ply,
+            int mark,
+            int preferredMove,
+            int moveLimit)
         {
-            int markToMove = maximizing ? ComputerGame.COMPUTER_MARK : ComputerGame.PLAYER_MARK;
-            int opponentMark = Invert(markToMove);
-
-            if (CountWinningMoves(board, markToMove, 1) > 0)
-                return markToMove == ComputerGame.COMPUTER_MARK ? maxRank - depth - 1 : minRank + depth + 1;
-
-            if (CountWinningMoves(board, opponentMark, 2) > 1)
-                return opponentMark == ComputerGame.COMPUTER_MARK ? maxRank - depth - 2 : minRank + depth + 2;
-
-            return EvaluateBoard(board);
-        }
-
-        private int GenerateMoves(GameBoard board, SearchBuffers search, int depth, int mark)
-        {
-            int[] moves = search.Moves[depth];
-            int[] scores = search.Scores[depth];
+            int[] moves = search.Moves[ply];
+            int[] scores = search.Scores[ply];
             int count = 0;
+            int forcingLevel = 0;
+            int opponentMark = Invert(mark);
 
             for (int x = 0; x < board.Width; x++)
             {
@@ -176,31 +246,53 @@ namespace Host.Models
                     if (board.Value(x, y) != 0 || !IsNearOccupiedCell(board, x, y))
                         continue;
 
-                    scores[count] = GetMoveOrderScore(board, x, y, mark);
-                    moves[count] = (x * board.Height) + y;
+                    bool wins = IsWinningMove(board, x, y, mark);
+                    bool blocksWin = IsWinningMove(board, x, y, opponentMark);
+                    int moveForcingLevel = wins ? 2 : blocksWin ? 1 : 0;
+                    if (moveForcingLevel < forcingLevel)
+                        continue;
+                    if (moveForcingLevel > forcingLevel)
+                    {
+                        forcingLevel = moveForcingLevel;
+                        count = 0;
+                    }
+
+                    int encodedMove = (x * board.Height) + y;
+                    int score = GetMoveOrderScore(board, x, y, mark, wins, blocksWin);
+                    if (encodedMove == preferredMove)
+                        score += PreferredMoveBonus;
+                    scores[count] = score;
+                    moves[count] = encodedMove;
                     count++;
                 }
             }
 
             Array.Sort(scores, moves, 0, count);
+            if (count > moveLimit)
+            {
+                int firstMove = count - moveLimit;
+                Array.Copy(scores, firstMove, scores, 0, moveLimit);
+                Array.Copy(moves, firstMove, moves, 0, moveLimit);
+                count = moveLimit;
+            }
             return count;
         }
 
-        private int GetMoveOrderScore(GameBoard board, int x, int y, int mark)
+        private int GetMoveOrderScore(
+            GameBoard board,
+            int x,
+            int y,
+            int mark,
+            bool wins,
+            bool blocksWin)
         {
             int score = GetPlacementPotential(board, x, y, mark) * 4;
             int opponentMark = Invert(mark);
             score += GetPlacementPotential(board, x, y, opponentMark) * 5;
 
-            board.SetValue(x, y, mark);
-            bool wins = IsWinningMove(board, x, y, mark);
-            board.SetValue(x, y, 0);
             if (wins)
                 score += 1000000;
 
-            board.SetValue(x, y, opponentMark);
-            bool blocksWin = IsWinningMove(board, x, y, opponentMark);
-            board.SetValue(x, y, 0);
             if (blocksWin)
                 score += 500000;
 
@@ -225,28 +317,6 @@ namespace Host.Models
                 score += length * length * (openEnds + 1);
             }
             return score;
-        }
-
-        private int CountWinningMoves(GameBoard board, int mark, int stopAfter)
-        {
-            int wins = 0;
-
-            for (int x = 0; x < board.Width; x++)
-            {
-                for (int y = 0; y < board.Height; y++)
-                {
-                    if (board.Value(x, y) != 0 || !IsNearOccupiedCell(board, x, y))
-                        continue;
-
-                    board.SetValue(x, y, mark);
-                    bool winsHere = IsWinningMove(board, x, y, mark);
-                    board.SetValue(x, y, 0);
-                    if (winsHere && ++wins == stopAfter)
-                        return wins;
-                }
-            }
-
-            return wins;
         }
 
         private static bool IsWinningMove(GameBoard board, int x, int y, int mark)
@@ -292,6 +362,11 @@ namespace Host.Models
 
         private static int EvaluateBoard(GameBoard board)
         {
+            return ClampHeuristicRank(EvaluateBoardRaw(board));
+        }
+
+        private static int EvaluateBoardRaw(GameBoard board)
+        {
             int rank = 0;
             for (int y = 0; y < board.Height; y++)
             {
@@ -317,6 +392,38 @@ namespace Host.Models
                     rank += EvaluateWindow(board, x, y, 1, -1);
             }
 
+            return rank;
+        }
+
+        private static int EvaluateAffectedWindows(GameBoard board, int x, int y)
+        {
+            int rank = 0;
+            for (int direction = 0; direction < DirectionX.Length; direction++)
+            {
+                int dx = DirectionX[direction];
+                int dy = DirectionY[direction];
+                for (int offset = 0; offset < GameBoard.WIN_LENGTH; offset++)
+                {
+                    int startX = x - (offset * dx);
+                    int startY = y - (offset * dy);
+                    int endX = startX + ((GameBoard.WIN_LENGTH - 1) * dx);
+                    int endY = startY + ((GameBoard.WIN_LENGTH - 1) * dy);
+                    if (startX < 0 || startX >= board.Width
+                        || startY < 0 || startY >= board.Height
+                        || endX < 0 || endX >= board.Width
+                        || endY < 0 || endY >= board.Height)
+                    {
+                        continue;
+                    }
+
+                    rank += EvaluateWindow(board, startX, startY, dx, dy);
+                }
+            }
+            return rank;
+        }
+
+        private static int ClampHeuristicRank(int rank)
+        {
             return Math.Max(-MaxHeuristicRank, Math.Min(MaxHeuristicRank, rank));
         }
 
@@ -412,20 +519,133 @@ namespace Host.Models
             return false;
         }
 
-        private sealed class SearchBuffers
+        private struct TranspositionEntry
+        {
+            public ulong Key;
+            public int Value;
+            public int BestMove;
+            public int Depth;
+            public int Generation;
+            public byte Bound;
+        }
+
+        private sealed class SearchWorkspace
         {
             public readonly int[][] Moves;
             public readonly int[][] Scores;
+            private readonly int _width;
+            private readonly int _height;
+            private readonly ulong[] _pieceKeys;
+            private readonly ulong[] _sideKeys;
+            private readonly TranspositionEntry[] _entries;
+            private int _generation;
 
-            public SearchBuffers(int capacity)
+            public int Nodes { get; set; }
+            public bool Aborted { get; set; }
+
+            public SearchWorkspace(int width, int height)
             {
-                Moves = new int[maxDepth][];
-                Scores = new int[maxDepth][];
-                for (int depth = 0; depth < maxDepth; depth++)
+                _width = width;
+                _height = height;
+                int capacity = checked(width * height);
+                Moves = new int[MaxSearchDepth][];
+                Scores = new int[MaxSearchDepth][];
+                for (int depth = 0; depth < MaxSearchDepth; depth++)
                 {
                     Moves[depth] = new int[capacity];
                     Scores[depth] = new int[capacity];
                 }
+
+                _pieceKeys = new ulong[capacity * 2];
+                _sideKeys = new ulong[2];
+                ulong randomState = 0xD1B54A32D192ED03UL
+                    ^ ((ulong)(uint)width << 32)
+                    ^ (uint)height;
+                for (int i = 0; i < _pieceKeys.Length; i++)
+                    _pieceKeys[i] = NextRandom(ref randomState);
+                for (int i = 0; i < _sideKeys.Length; i++)
+                    _sideKeys[i] = NextRandom(ref randomState);
+
+                _entries = new TranspositionEntry[TranspositionTableSize];
+            }
+
+            public bool Matches(GameBoard board)
+            {
+                return board.Width == _width && board.Height == _height;
+            }
+
+            public void StartSearch()
+            {
+                Nodes = 0;
+                Aborted = false;
+                if (_generation == int.MaxValue)
+                {
+                    Array.Clear(_entries, 0, _entries.Length);
+                    _generation = 1;
+                }
+                else
+                {
+                    _generation++;
+                }
+            }
+
+            public ulong ComputeHash(GameBoard board)
+            {
+                ulong hash = 0;
+                for (int x = 0; x < board.Width; x++)
+                {
+                    for (int y = 0; y < board.Height; y++)
+                    {
+                        int mark = board.Value(x, y);
+                        if (mark == ComputerGame.PLAYER_MARK || mark == ComputerGame.COMPUTER_MARK)
+                            hash ^= GetPieceKey((x * board.Height) + y, mark);
+                    }
+                }
+                return hash;
+            }
+
+            public ulong GetPieceKey(int encodedMove, int mark)
+            {
+                int markIndex = mark == ComputerGame.COMPUTER_MARK ? 1 : 0;
+                return _pieceKeys[(encodedMove * 2) + markIndex];
+            }
+
+            public ulong GetSideKey(int mark)
+            {
+                return _sideKeys[mark == ComputerGame.COMPUTER_MARK ? 1 : 0];
+            }
+
+            public bool TryGetEntry(ulong key, out TranspositionEntry entry)
+            {
+                entry = _entries[(int)(key & (TranspositionTableSize - 1))];
+                return entry.Generation == _generation && entry.Key == key;
+            }
+
+            public void StoreEntry(ulong key, int depth, int value, byte bound, int bestMove)
+            {
+                int index = (int)(key & (TranspositionTableSize - 1));
+                TranspositionEntry existing = _entries[index];
+                if (existing.Generation == _generation && existing.Depth > depth)
+                    return;
+
+                _entries[index] = new TranspositionEntry
+                {
+                    Key = key,
+                    Value = value,
+                    BestMove = bestMove,
+                    Depth = depth,
+                    Generation = _generation,
+                    Bound = bound,
+                };
+            }
+
+            private static ulong NextRandom(ref ulong state)
+            {
+                state += 0x9E3779B97F4A7C15UL;
+                ulong value = state;
+                value = (value ^ (value >> 30)) * 0xBF58476D1CE4E5B9UL;
+                value = (value ^ (value >> 27)) * 0x94D049BB133111EBUL;
+                return value ^ (value >> 31);
             }
         }
     }

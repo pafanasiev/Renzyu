@@ -369,6 +369,63 @@ namespace Host.Tests
             Assert.AreEqual(0, board[move.X, move.Y]);
         }
 
+        [TestMethod]
+        [Timeout(1000)]
+        public void GetBestMove_QuietSparsePosition_CompletesWithinCpuBudget()
+        {
+            var board = GetBoard(new int[,]
+            {
+                {2,9},
+                {9,2},
+                {9,16},
+                {16,9},
+            });
+            AddOpponentMoves(new int[,]
+            {
+                {2,2},
+                {2,16},
+                {9,9},
+                {16,2},
+                {16,16},
+            }, ref board);
+
+            Cell move = GetAI().GetBestMove(new GameBoard(board));
+
+            Assert.AreEqual(0, board[move.X, move.Y]);
+        }
+
+        [TestMethod]
+        [Timeout(1000)]
+        public void GetBestMove_QuietDistributedPosition_CompletesWithinCpuBudget()
+        {
+            var board = GetBoard(new int[,]
+            {
+                {2,7},
+                {2,17},
+                {7,7},
+                {7,17},
+                {12,7},
+                {12,17},
+                {17,7},
+                {17,17},
+            });
+            AddOpponentMoves(new int[,]
+            {
+                {2,2},
+                {2,12},
+                {7,2},
+                {7,12},
+                {12,2},
+                {12,12},
+                {17,2},
+                {17,12},
+            }, ref board);
+
+            Cell move = GetAI().GetBestMove(new GameBoard(board));
+
+            Assert.AreEqual(0, board[move.X, move.Y]);
+        }
+
         /*
            7|_|_|_|_|_|_|_|_
            6|_|_|_|_|_|_|_|_
