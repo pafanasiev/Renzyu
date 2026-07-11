@@ -12,6 +12,14 @@ namespace Host.Models
 
     public sealed class GameHub : Hub<IGameClient>
     {
+        private readonly IAiModelCatalog aiModelCatalog;
+
+        public GameHub(IAiModelCatalog aiModelCatalog)
+        {
+            this.aiModelCatalog = aiModelCatalog
+                ?? throw new ArgumentNullException(nameof(aiModelCatalog));
+        }
+
         public async Task SendMove(int x, int y)
         {
             var game = GetCurrentGame();
@@ -25,8 +33,17 @@ namespace Host.Models
             ArgumentNullException.ThrowIfNull(request);
 
             request.Connection = Context.ConnectionId;
-            var queue = PlayerQueue.Add(request);
-            var game = queue.GetGame();
+            var queue = PlayerQueue.Add(request, aiModelCatalog);
+            Game game;
+            try
+            {
+                game = queue.GetGame();
+            }
+            catch (KeyNotFoundException)
+            {
+                PlayerQueue.Dequeue(Context.ConnectionId);
+                throw new HubException("The selected AI model is no longer available.");
+            }
             if (game == null)
             {
                 return;

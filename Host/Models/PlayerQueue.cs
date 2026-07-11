@@ -21,6 +21,7 @@ namespace Host.Models
                 {
                     existingRequest.IsComputerGame = request.IsComputerGame;
                     existingRequest.Token = request.Token;
+                    existingRequest.AiModelId = request.AiModelId;
                 }
             }
         }
@@ -46,13 +47,15 @@ namespace Host.Models
             }
         }
 
-        public static PlayerQueue Add(GameRequest request)
+        public static PlayerQueue Add(GameRequest request, IAiModelCatalog aiModelCatalog)
         {
             if (request.Connection == null) throw new ArgumentNullException("connection cannot be null");
 
             PlayerQueue queue;
             if (request.IsComputerGame)
-                queue = new ComputerPlayerQueue();
+                queue = new ComputerPlayerQueue(
+                    request.Connection,
+                    aiModelCatalog ?? throw new ArgumentNullException(nameof(aiModelCatalog)));
             else if (request.IsPublicGame)
                 queue = new PublicGamePlayerQueue();
             else

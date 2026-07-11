@@ -1,4 +1,4 @@
-@model Guid?
+@model Host.Models.GamePageViewModel
 <div class="4u">
     <div>
         <h2 data-bind="text:message"></h2>
@@ -6,18 +6,35 @@
     <div data-bind="visible:state()==7">
         <a asp-action="Game" class="button" target="_blank">Join another game</a>
     </div>
-    @if (Model != null)
+    @if (Model.Token != null)
     {
         <div>
-            Send your opponent this <a asp-action="Game" asp-route-token="@Model">private url</a>
+            Send your opponent this <a asp-action="Game" asp-route-token="@Model.Token">private url</a>
             so he would join your game.
         </div>
     }
     else
     {
-        <p>
-            <a href="#" data-bind="visible: state() == 8, click: playWithComputer">Play with computer</a>
-        </p>
+        <div class="ai-picker" data-bind="visible: state() == 8">
+            <label for="ai-model">Choose your AI opponent</label>
+            <select id="ai-model" data-bind="value: selectedAiModelId">
+                @foreach (var aiModel in Model.AiModels)
+                {
+                    if (aiModel.IsBuiltIn)
+                    {
+                        <option value="@aiModel.Id">@aiModel.Name - depth 4 search</option>
+                    }
+                    else
+                    {
+                        <option value="@aiModel.Id">
+                            @aiModel.Name - @aiModel.EpisodesTrained.ToString("N0") episodes,
+                            @aiModel.EvaluationScore.ToString("P0") evaluation score
+                        </option>
+                    }
+                }
+            </select>
+            <a href="#" class="button" data-bind="click: playWithComputer">Play selected AI</a>
+        </div>
     }
 </div>
 <div class="8u">
@@ -32,7 +49,7 @@
 
     <script type="text/javascript">
         $(function () {
-            var myGame = new game('@Model');
+            var myGame = new game('@(Model.Token?.ToString() ?? "")', '@Model.DefaultAiModelId');
             ko.applyBindings(myGame);
             myGame.initialize();
         });

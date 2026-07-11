@@ -29,6 +29,7 @@ packages/*
 # npm restore and generated browser assets
 node_modules/
 Host/wwwroot/Scripts/vendor/
+Host/TrainedModels/*.json
 
 # Legacy Visual Studio source-control metadata
 *.vssscc

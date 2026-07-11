@@ -8,8 +8,9 @@ namespace Host.Models
         public const int maxRank = 100000;
         public const int minRank = -100000;
 
-        private const int MaxSearchDepth = 4;
-        private const int MaxSearchNodes = 60000;
+        private const int MaxSupportedSearchDepth = 6;
+        private const int DefaultSearchDepth = 4;
+        private const int DefaultMaxSearchNodes = 60000;
         private const int TranspositionTableSize = 8192;
         private const int NoMove = -1;
         private const byte ExactBound = 0;
@@ -24,7 +25,25 @@ namespace Host.Models
         private static readonly int[] DirectionX = { 1, 0, 1, 1 };
         private static readonly int[] DirectionY = { 0, 1, 1, -1 };
         private readonly object _searchLock = new object();
+        private readonly int _searchDepth;
+        private readonly int _maxSearchNodes;
         private SearchWorkspace _workspace;
+
+        public AI()
+            : this(DefaultSearchDepth, DefaultMaxSearchNodes)
+        {
+        }
+
+        public AI(int searchDepth, int maxSearchNodes)
+        {
+            if (searchDepth < 1 || searchDepth > MaxSupportedSearchDepth)
+                throw new ArgumentOutOfRangeException("searchDepth");
+            if (maxSearchNodes < 1)
+                throw new ArgumentOutOfRangeException("maxSearchNodes");
+
+            _searchDepth = searchDepth;
+            _maxSearchNodes = maxSearchNodes;
+        }
 
         public Cell GetBestMove(GameBoard board)
         {
@@ -53,7 +72,7 @@ namespace Host.Models
             int evaluation = EvaluateBoardRaw(board);
             int bestMove = NoMove;
 
-            for (int depth = 1; depth <= MaxSearchDepth; depth++)
+            for (int depth = 1; depth <= _searchDepth; depth++)
             {
                 int iterationMove;
                 int iterationRank = Search(
@@ -102,7 +121,7 @@ namespace Host.Models
         {
             bestMove = NoMove;
             search.Nodes++;
-            if (search.Nodes > MaxSearchNodes)
+            if (search.Nodes > _maxSearchNodes)
             {
                 search.Aborted = true;
                 return 0;
@@ -548,9 +567,9 @@ namespace Host.Models
                 _width = width;
                 _height = height;
                 int capacity = checked(width * height);
-                Moves = new int[MaxSearchDepth][];
-                Scores = new int[MaxSearchDepth][];
-                for (int depth = 0; depth < MaxSearchDepth; depth++)
+                Moves = new int[MaxSupportedSearchDepth][];
+                Scores = new int[MaxSupportedSearchDepth][];
+                for (int depth = 0; depth < MaxSupportedSearchDepth; depth++)
                 {
                     Moves[depth] = new int[capacity];
                     Scores[depth] = new int[capacity];

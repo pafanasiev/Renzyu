@@ -10,6 +10,7 @@ namespace Host.Models
         public string Connection {get;set;}
         public string Token { get; set; }
         public bool IsComputerGame { get; set; }
+        public string AiModelId { get; set; }
         public bool IsPublicGame
         {
             get
