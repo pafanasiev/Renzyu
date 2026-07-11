@@ -6,8 +6,8 @@
     "build:client": "node scripts/build-client.mjs"
   },
   "dependencies": {
+    "@microsoft/signalr": "10.0.0",
     "jquery": "3.7.1",
-    "knockout": "3.5.3",
-    "signalr": "2.4.3"
+    "knockout": "3.5.3"
   }
 }

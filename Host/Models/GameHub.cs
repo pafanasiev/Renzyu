@@ -1,88 +1,100 @@
-using System;
-using System.Threading.Tasks;
-using Microsoft.AspNet.SignalR;
-using Microsoft.AspNet.SignalR.Hubs;
+using Microsoft.AspNetCore.SignalR;
 
 namespace Host.Models
 {
-    [HubName("game")]
-    public class GameHub : Hub
+    public interface IGameClient
     {
-        public void SendMove(int x, int y)
+        Task ReceiveDisconnect();
+        Task ReceiveJoin(string gameId, int mark);
+        Task ReceiveMove(int x, int y, int mark);
+        Task ReceiveWin(IReadOnlyCollection<Cell> cells, int mark);
+    }
+
+    public sealed class GameHub : Hub<IGameClient>
+    {
+        public async Task SendMove(int x, int y)
         {
-            Game game = GetCurrentGame();
-            MoveResult result = game.MakeMove(Context.ConnectionId, x, y);
-            ProcessMoveResult(result, game);
+            var game = GetCurrentGame();
+            var result = game.MakeMove(Context.ConnectionId, x, y);
+
+            await ProcessMoveResultAsync(result, game);
         }
 
-        public void Enqueue(GameRequest request)
+        public async Task Enqueue(GameRequest request)
         {
-            PlayerQueue queue = PlayerQueue.Add(request);
+            ArgumentNullException.ThrowIfNull(request);
+
+            request.Connection = Context.ConnectionId;
+            var queue = PlayerQueue.Add(request);
             var game = queue.GetGame();
-
-            //if we were able to find an opponent for this game request
-            if (game != null)
+            if (game == null)
             {
-                CreateSignalRGroupForGame(game);
-                SendJoinNotificationsToGroup(game);
+                return;
             }
+
+            await CreateSignalRGroupForGameAsync(game);
+            await SendJoinNotificationsToGroupAsync(game);
         }
 
-        private void SendJoinNotificationsToGroup(Game game)
+        public override async Task OnDisconnectedAsync(Exception exception)
         {
-            //item.Key - connection
-            //item.Value - mark
-            foreach (var item in game.GetPlayersWithMarks())
-            {
-                Clients.Client(item.Key).receiveJoin(game.GameId.ToString(), item.Value);
-            }
-        }
-
-        private void CreateSignalRGroupForGame(Game game)
-        {
-            foreach (var connection in game.GetPlayersWithMarks().Keys)
-            {
-                Groups.Add(connection, game.GameId.ToString());
-            }
-        }
-
-        public override Task OnDisconnected(bool stopCalled)
-        {
-            //remove the connection from queue if it's still waiting for opponent
             PlayerQueue.Dequeue(Context.ConnectionId);
 
-            //notify all opponents in all games about disconnect
-            var games = Game.GetByConnectionId(Context.ConnectionId);
+            var games = Game.GetByConnectionId(Context.ConnectionId).ToArray();
             foreach (var game in games)
             {
-                Clients.Group(game.GameId.ToString()).receiveDisconnect();
-
-                //remove the game and free memory
+                await Clients.Group(game.GameId.ToString()).ReceiveDisconnect();
                 game.End();
             }
-            return base.OnDisconnected(stopCalled);
+
+            await base.OnDisconnectedAsync(exception);
         }
 
-        private void ProcessMoveResult(MoveResult result, Game game)
+        private async Task SendJoinNotificationsToGroupAsync(Game game)
         {
-            if (result == null) return;
+            var notifications = game.GetPlayersWithMarks().Select(player =>
+                Clients.Client(player.Key).ReceiveJoin(game.GameId.ToString(), player.Value));
 
-            Clients.Group(game.GameId.ToString()).receiveMove(result.X, result.Y, result.Mark);
-            if (result.WinRow != null)
+            await Task.WhenAll(notifications);
+        }
+
+        private async Task CreateSignalRGroupForGameAsync(Game game)
+        {
+            var groupName = game.GameId.ToString();
+            var additions = game.GetPlayersWithMarks().Keys.Select(connectionId =>
+                Groups.AddToGroupAsync(connectionId, groupName));
+
+            await Task.WhenAll(additions);
+        }
+
+        private async Task ProcessMoveResultAsync(MoveResult result, Game game)
+        {
+            while (result != null)
             {
-                Clients.Group(game.GameId.ToString()).receiveWin(result.WinRow.Cells, result.Mark);
+                await Clients.Group(game.GameId.ToString())
+                    .ReceiveMove(result.X, result.Y, result.Mark);
 
-                //remove the game
-                game.End();
+                if (result.WinRow != null)
+                {
+                    await Clients.Group(game.GameId.ToString())
+                        .ReceiveWin(result.WinRow.Cells, result.Mark);
+                    game.End();
+                    return;
+                }
+
+                result = result.OpponentMove;
             }
-            //recursively process next move if the game could return it already
-            ProcessMoveResult(result.OpponentMove, game);
         }
 
         private Game GetCurrentGame()
         {
-            Guid gameId = Guid.Parse(Clients.Caller.gameId);
-            return Game.GetById(gameId);
+            var games = Game.GetByConnectionId(Context.ConnectionId).Take(2).ToArray();
+            if (games.Length != 1)
+            {
+                throw new HubException("The connection is not associated with exactly one active game.");
+            }
+
+            return games[0];
         }
     }
 }

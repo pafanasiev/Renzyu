@@ -1,23 +1,28 @@
-﻿using System;
-using System.Web.Mvc;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Host.Controllers
 {
     public class HomeController : Controller
     {
-        public ActionResult Index()
+        public IActionResult Index()
         {
-            var newGameId = Guid.NewGuid();
-            return View(newGameId);
+            return View(Guid.NewGuid());
         }
-        [ActionName("Game")]
-        public ActionResult GameAction(Guid? token)
+
+        public IActionResult Game(Guid? token)
         {
             return View(token);
         }
-        public ActionResult PrivateGame()
+
+        public IActionResult PrivateGame()
         {
-            return RedirectToAction("Game", new { gameId = Guid.NewGuid() });
+            return RedirectToAction(nameof(Game), new { token = Guid.NewGuid() });
+        }
+
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public IActionResult Error()
+        {
+            return View();
         }
     }
 }

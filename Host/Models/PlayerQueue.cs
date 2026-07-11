@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Web;
 
 namespace Host.Models
 {
@@ -28,7 +27,10 @@ namespace Host.Models
 
         public static void Dequeue(params string[] connections)
         {
-            GameRequests.RemoveAll(r => connections.Contains(r.Connection));
+            lock (lockObject)
+            {
+                GameRequests.RemoveAll(r => connections.Contains(r.Connection));
+            }
         }
 
         protected abstract Game GetGameSpecific();

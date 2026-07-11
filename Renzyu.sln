@@ -1,26 +1,12 @@
-﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Host", "Host\Host.csproj", "{F2555302-E654-4BFA-AD47-FEEACED11DBD}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Host.Tests", "Host.Tests\Host.Tests.csproj", "{5AEF92E1-6C6C-4A6D-9A4F-7441C3B91874}"
 EndProject
 Global
-	GlobalSection(TeamFoundationVersionControl) = preSolution
-		SccNumberOfProjects = 4
-		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
-		SccTeamFoundationServer = https://00jared00.visualstudio.com/defaultcollection
-		SccLocalPath0 = .
-		SccProjectUniqueName1 = Host\\Host.csproj
-		SccProjectName1 = Host
-		SccLocalPath1 = Host
-		SccProjectUniqueName2 = Host.Tests\\Host.Tests.csproj
-		SccProjectName2 = Host.Tests
-		SccLocalPath2 = Host.Tests
-		SccProjectUniqueName3 = Host.UnitTests\\Host.UnitTests.csproj
-		SccProjectName3 = Host.UnitTests
-		SccLocalPath3 = Host.UnitTests
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU

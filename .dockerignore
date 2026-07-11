@@ -1,0 +1,10 @@
+.git
+.github
+.vs
+**/bin
+**/obj
+**/node_modules
+**/TestResults
+**/*.user
+Host/wwwroot/Scripts/vendor
+Renzyu.vssscc
