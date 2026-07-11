@@ -16,6 +16,8 @@ namespace Host.Models
 
         public int Winner { get; set; }
         public Cell LastMove { get { return _lastMove; } set {_lastMove = value;} }
+        public int Width { get { return _length; } }
+        public int Height { get { return _height; } }
 
         public GameBoard()
             :this(new int[19, 19])
@@ -160,7 +162,7 @@ namespace Host.Models
         }
         public int Value(int x, int y)
         {
-            if (!IsOnBoard(new Cell(x, y)))
+            if (x < 0 || x >= _length || y < 0 || y >= _height)
                 return -1;
             return _board[x, y];
         }

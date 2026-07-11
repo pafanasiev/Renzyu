@@ -231,6 +231,144 @@ namespace Host.Tests
             AssertMove(board, 3, 2);
         }
 
+        [TestMethod]
+        public void GetBestMove_ImmediateDiagonalWinAndOpponentThreat_TakesWin()
+        {
+            var board = GetBoard(new int[,]
+            {
+                {5,5},
+                {6,6},
+                {7,7},
+                {8,8},
+            });
+            AddOpponentMoves(new int[,]
+            {
+                {4,4},
+                {2,12},
+                {3,12},
+                {4,12},
+                {5,12},
+            }, ref board);
+
+            AssertMove(board, 9, 9);
+        }
+
+        [TestMethod]
+        public void GetBestMove_MoveCreatesTwoOpenFours_TakesFork()
+        {
+            var board = GetBoard(new int[,]
+            {
+                {7,9},
+                {8,9},
+                {10,9},
+                {9,7},
+                {9,8},
+                {9,10},
+            });
+
+            AssertMove(board, 9, 9);
+        }
+
+        [TestMethod]
+        public void GetBestMove_OpponentCanCreateTwoOpenFours_PreventsFork()
+        {
+            var board = GetBoard(new int[,]
+            {
+                {3,3},
+                {5,4},
+                {12,14},
+            });
+            AddOpponentMoves(new int[,]
+            {
+                {7,9},
+                {8,9},
+                {10,9},
+                {9,7},
+                {9,8},
+                {9,10},
+            }, ref board);
+
+            AssertMove(board, 9, 9);
+        }
+
+        [TestMethod]
+        [Timeout(1000)]
+        public void GetBestMove_AdvancedPosition_DoesNotMutateBoardOrBuildObjectTree()
+        {
+            var board = GetBoard(new int[,]
+            {
+                {5,5},
+                {6,6},
+                {7,5},
+                {8,6},
+                {9,7},
+                {10,8},
+            });
+            AddOpponentMoves(new int[,]
+            {
+                {5,6},
+                {6,5},
+                {7,7},
+                {8,7},
+                {9,8},
+                {10,9},
+            }, ref board);
+            var gameBoard = new GameBoard(board);
+            var before = (int[,])board.Clone();
+            IAI ai = GetAI();
+            ai.GetBestMove(gameBoard);
+            MinimaxNode.TotalChildrenCreated = 0;
+            long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+
+            ai.GetBestMove(gameBoard);
+
+            long allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+            Assert.AreEqual(0, MinimaxNode.TotalChildrenCreated, "search should not retain a node for every explored move");
+            Assert.IsTrue(allocatedBytes < 32768, "search allocated " + allocatedBytes + " bytes");
+            for (int x = 0; x < GameBoard.SIZE; x++)
+            {
+                for (int y = 0; y < GameBoard.SIZE; y++)
+                {
+                    Assert.AreEqual(before[x, y], gameBoard.Value(x, y), "search mutated the input board at " + x + ":" + y);
+                }
+            }
+        }
+
+        [TestMethod]
+        public void GetBestMove_LargerBoard_WinsOutsideDefaultBoardSize()
+        {
+            var board = new int[20, 20];
+            board[14, 19] = ComputerGame.PLAYER_MARK;
+            board[15, 19] = ComputerGame.COMPUTER_MARK;
+            board[16, 19] = ComputerGame.COMPUTER_MARK;
+            board[17, 19] = ComputerGame.COMPUTER_MARK;
+            board[18, 19] = ComputerGame.COMPUTER_MARK;
+
+            Cell move = GetAI().GetBestMove(new GameBoard(board));
+
+            Assert.AreEqual(19, move.X);
+            Assert.AreEqual(19, move.Y);
+        }
+
+        [TestMethod]
+        [Timeout(1000)]
+        public void GetBestMove_SparseCornerPosition_CompletesWithinCpuBudget()
+        {
+            var board = GetBoard(new int[,]
+            {
+                {0,0},
+                {1,1},
+            });
+            AddOpponentMoves(new int[,]
+            {
+                {18,18},
+            }, ref board);
+
+            Cell move = GetAI().GetBestMove(new GameBoard(board));
+
+            Assert.AreEqual(0, board[move.X, move.Y]);
+        }
+
         /*
            7|_|_|_|_|_|_|_|_
            6|_|_|_|_|_|_|_|_
@@ -288,4 +426,3 @@ namespace Host.Tests
         }
     }
 }
-
