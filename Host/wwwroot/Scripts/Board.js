@@ -1,5 +1,5 @@
 /// <reference path="_references.js" />
-function game(token) {
+function game(token, defaultAiModelId) {
     var self = this;
     var connection = new signalR.HubConnectionBuilder()
         .withUrl("/gameHub")
@@ -28,12 +28,14 @@ function game(token) {
     this.state = ko.observable();
     this.player = ko.observable("");
     this.opponent = ko.observable("");
+    this.selectedAiModelId = ko.observable(defaultAiModelId);
     this.board = new board();
 
     this.requestToPlay = function (playWithComputer) {
         return connection.invoke("Enqueue", {
             token: self.token(),
-            isComputerGame: playWithComputer
+            isComputerGame: playWithComputer,
+            aiModelId: playWithComputer ? self.selectedAiModelId() : null
         }).catch(function (error) {
             console.error(error.toString());
             self.message("unable to join a game");

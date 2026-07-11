@@ -28,12 +28,14 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 
 ENV ASPNETCORE_HTTP_PORTS=8080 \
-    RENZYU_GAME_TELEMETRY_DIRECTORY=/data/telemetry
+    RENZYU_GAME_TELEMETRY_DIRECTORY=/data/telemetry \
+    RENZYU_AI_MODEL_DIRECTORY=/data/models
 EXPOSE 8080
 
 COPY --from=build /app/publish .
-RUN mkdir -p /data/telemetry && chown $APP_UID:$APP_UID /data/telemetry
-VOLUME ["/data/telemetry"]
+RUN mkdir -p /data/telemetry /data/models \
+    && chown $APP_UID:$APP_UID /data/telemetry /data/models
+VOLUME ["/data/telemetry", "/data/models"]
 USER $APP_UID
 
 ENTRYPOINT ["dotnet", "Host.dll"]

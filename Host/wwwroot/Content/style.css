@@ -190,3 +190,26 @@
 .win {
     background-color:red;
 }
+
+.ai-picker {
+    margin-top: 1.25em;
+}
+
+.ai-picker label {
+    color: #474e43;
+    display: block;
+    margin-bottom: 0.4em;
+}
+
+.ai-picker select {
+    background: #fff;
+    border: solid 1px #9aa79d;
+    border-radius: 6px;
+    color: #474e43;
+    display: block;
+    font: inherit;
+    margin-bottom: 0.8em;
+    max-width: 100%;
+    padding: 0.45em;
+    width: 100%;
+}

@@ -9,6 +9,15 @@ builder.Services
     .AddJsonProtocol(options =>
         options.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase);
 
+string modelDirectory = Environment.GetEnvironmentVariable("RENZYU_AI_MODEL_DIRECTORY");
+if (string.IsNullOrWhiteSpace(modelDirectory))
+    modelDirectory = Path.Combine(builder.Environment.ContentRootPath, "TrainedModels");
+Directory.CreateDirectory(modelDirectory);
+builder.Services.AddSingleton<IAiModelCatalog>(services =>
+    new FileAiModelCatalog(
+        modelDirectory,
+        services.GetRequiredService<ILogger<FileAiModelCatalog>>()));
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
