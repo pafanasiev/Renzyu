@@ -24,7 +24,7 @@ function game(token) {
     this.board = new board();
 
     this.requestToPlay = function (playWithComputer) {
-        $.connection.game.enqueue({
+        $.connection.game.server.enqueue({
             connection: $.connection.hub.id,
             token: this.token(),
             isComputerGame: playWithComputer
@@ -62,19 +62,19 @@ function game(token) {
     }
     this.initialize = function () {
         var self = this;
-        $.connection.game.receiveMove = function (x, y, mark) {
+        $.connection.game.client.receiveMove = function (x, y, mark) {
             console.log('receiveMove. mark: ' + mark + ', x:' + x + ', y:' + y);
             self.receiveMove(x, y, mark);
         }
-        $.connection.game.receiveWin = function (points, mark) {
+        $.connection.game.client.receiveWin = function (points, mark) {
             console.log('receiveWin. isWinner: ' + mark);
             self.receiveWin(points, mark);
         }
-        $.connection.game.receiveJoin = function (gameId, myMark) {
+        $.connection.game.client.receiveJoin = function (gameId, myMark) {
             console.log('receiveJoin. gameid:' + gameId + ', myMark:' + myMark);
             self.receiveJoin(gameId, myMark);
         }
-        $.connection.game.receiveDisconnect = function () {
+        $.connection.game.client.receiveDisconnect = function () {
             console.log('receiveDisconnect');
             self.receiveDisconnect();
         }
@@ -86,7 +86,7 @@ function game(token) {
     }
     this.receiveJoin = function (gameId, myMark) {
         this.gameId(gameId);
-        $.connection.game.gameId = this.gameId();
+        $.connection.game.state.gameId = this.gameId();
         this.myMark = ko.observable(myMark);
 
         //mark can be 1 or 2. So pick either state 1 or 2 based on mark
@@ -148,7 +148,7 @@ function cell(x, y) {
     this.sendMove = function () {
         //only send moves if it's my turn
         if (game.current.state() == 1) {
-            $.connection.game.sendMove(this.x, this.y);
+            $.connection.game.server.sendMove(this.x, this.y);
         }
     }
 }
