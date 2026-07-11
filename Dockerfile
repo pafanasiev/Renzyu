@@ -9,7 +9,7 @@ RUN npm ci --ignore-scripts --no-audit --no-fund
 COPY scripts ./scripts
 RUN npm run build:client
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
@@ -24,13 +24,16 @@ RUN dotnet publish Host/Host.csproj \
     --output /app/publish \
     -p:SkipClientBuild=true
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 
-ENV ASPNETCORE_HTTP_PORTS=8080
+ENV ASPNETCORE_HTTP_PORTS=8080 \
+    RENZYU_GAME_TELEMETRY_DIRECTORY=/data/telemetry
 EXPOSE 8080
 
 COPY --from=build /app/publish .
+RUN mkdir -p /data/telemetry && chown $APP_UID:$APP_UID /data/telemetry
+VOLUME ["/data/telemetry"]
 USER $APP_UID
 
 ENTRYPOINT ["dotnet", "Host.dll"]
