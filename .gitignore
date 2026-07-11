@@ -28,7 +28,7 @@ packages/*
 
 # npm restore and generated browser assets
 node_modules/
-Host/Scripts/vendor/
+Host/wwwroot/Scripts/vendor/
 
 # Legacy Visual Studio source-control metadata
 *.vssscc

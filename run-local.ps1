@@ -9,65 +9,19 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-function Get-ProgramFilesRoots {
-    return @($env:ProgramFiles, ${env:ProgramFiles(x86)}) |
-        Where-Object { $_ } |
-        Select-Object -Unique
-}
-
-function Find-MSBuild {
-    $command = Get-Command "MSBuild.exe" -ErrorAction SilentlyContinue
-    if ($command) {
-        return $command.Source
-    }
-
-    foreach ($root in Get-ProgramFilesRoots) {
-        $vsWhere = Join-Path $root "Microsoft Visual Studio\Installer\vswhere.exe"
-        if (Test-Path $vsWhere) {
-            $path = & $vsWhere -latest -products * -requires Microsoft.Component.MSBuild `
-                -find "MSBuild\**\Bin\MSBuild.exe" | Select-Object -First 1
-            if ($path) {
-                return $path
-            }
-        }
-    }
-
-    throw "MSBuild was not found. Install Visual Studio or Visual Studio Build Tools with the .NET desktop build tools workload."
-}
-
-function Find-IISExpress {
-    foreach ($root in Get-ProgramFilesRoots) {
-        $candidate = Join-Path $root "IIS Express\iisexpress.exe"
-        if (Test-Path $candidate) {
-            return $candidate
-        }
-    }
-
-    throw "IIS Express was not found. Install IIS Express or Visual Studio with ASP.NET and web development tools."
-}
-
 $repositoryRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectPath = Join-Path $repositoryRoot "Host\Host.csproj"
-$webRoot = Join-Path $repositoryRoot "Host"
-$msBuild = Find-MSBuild
-$iisExpress = Find-IISExpress
-
-Write-Host "Building Renzyu ($Configuration)..."
-& $msBuild $projectPath /restore /t:Build "/p:Configuration=$Configuration" /nologo /verbosity:minimal
-if ($LASTEXITCODE -ne 0) {
-    throw "Build failed with exit code $LASTEXITCODE."
-}
+$url = "http://localhost:$Port"
 
 $activePorts = [System.Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().GetActiveTcpListeners().Port
 if ($activePorts -contains $Port) {
     throw "Port $Port is already in use."
 }
 
-$url = "http://localhost:$Port/"
-Write-Host "Renzyu is running at $url"
-Write-Host "Press Ctrl+C to stop IIS Express."
+Write-Host "Renzyu will run at $url"
+Write-Host "Press Ctrl+C to stop Kestrel."
 
-& $iisExpress "/path:$webRoot" "/port:$Port" /systray:false
+& dotnet run --project $projectPath --configuration $Configuration -- --urls $url
 if ($LASTEXITCODE -ne 0) {
-    throw "IIS Express exited with code $LASTEXITCODE."
+    throw "Renzyu exited with code $LASTEXITCODE."
 }

@@ -1,15 +1,15 @@
-﻿@model Guid?
+@model Guid?
 <div class="4u">
     <div>
         <h2 data-bind="text:message"></h2>
     </div>
     <div data-bind="visible:state()==7">
-        @Html.ActionLink("Join another game", "Game", null, new { Class = "button", target = "_blank" })
+        <a asp-action="Game" class="button" target="_blank">Join another game</a>
     </div>
     @if (Model != null)
     {
         <div>
-            Send your opponent this @Html.ActionLink("private url", "Game", new { token = Model }, null)
+            Send your opponent this <a asp-action="Game" asp-route-token="@Model">private url</a>
             so he would join your game.
         </div>
     }
@@ -19,10 +19,6 @@
             <a href="#" data-bind="visible: state() == 8, click: playWithComputer">Play with computer</a>
         </p>
     }
-    @*<div data-bind="visible:state()==3||state()==4">
-        <a href="#" class="button" data-bind="click:requestRematch">request a rematch</a>
-    </div>
-    *@
 </div>
 <div class="8u">
     <div class="board-wrapper">
@@ -33,7 +29,6 @@
             </div>
         </div>
     </div>
-
 
     <script type="text/javascript">
         $(function () {

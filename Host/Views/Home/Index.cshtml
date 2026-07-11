@@ -1,9 +1,9 @@
-﻿@model Guid
+@model Guid
 <div class="12u">
-<section>
-    <div style="text-align:center">
-            @Html.ActionLink("Join a random game", "Game", null, new { Class = "button" })
-            @Html.ActionLink("play with friends", "Game", new { token = Model }, new { Class = "button" })
-    </div>
-</section>
-    </div>
+    <section>
+        <div style="text-align:center">
+            <a asp-action="Game" class="button">Join a random game</a>
+            <a asp-action="Game" asp-route-token="@Model" class="button">play with friends</a>
+        </div>
+    </section>
+</div>
